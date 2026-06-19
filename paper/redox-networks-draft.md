@@ -4,8 +4,9 @@
 **Affiliation:** Independent Researcher
 **Contact:** moutasem.hamdi14@gmail.com
 **ORCID:** 0009-0002-6350-1534
+**Code and figures:** https://github.com/Al-Mo3tasem/redox-networks
 
-*Draft for arXiv (cs.LG). Plain-language working version; a LaTeX version follows once the text is approved.*
+*Preprint.*
 
 ---
 
@@ -14,7 +15,7 @@
 We introduce the Redox Network, a neural network whose units do not freely produce
 outputs. Instead, each unit holds an amount of a conserved quantity that we call charge,
 and units pass charge to one another along learned connections until the system reaches a
-balance (an equilibrium). The design is inspired by reduction–oxidation (redox) chemistry,
+balance (an equilibrium). The design is inspired by reduction-oxidation (redox) chemistry,
 where atoms donate and accept electrons and a reaction settles at a stable state. We add
 two further ingredients: a soft preference for charge to rest at discrete levels, and a
 hard, learned gate on each input feature that lets the network ignore a feature entirely.
@@ -22,7 +23,7 @@ hard, learned gate on each input feature that lets the network ignore a feature 
 We study the model on tabular data, the setting where gradient-boosted decision trees
 (GBDTs) such as XGBoost still beat neural networks. Our model has one clear strength: with
 the hard feature gate it becomes robust to useless (uninformative) features. When we add
-100 pure-noise columns to a dataset, our model's accuracy drops by less than half a point —
+100 pure-noise columns to a dataset, our model's accuracy drops by less than half a point,
 the smallest drop of every model we tested, including XGBoost and LightGBM. The standard
 neural networks fall far more (a multi-layer perceptron by about 9 points, a tabular ResNet
 by about 12, TabNet by 6, FT-Transformer by 3), so at high noise our model becomes the most
@@ -50,7 +51,7 @@ Most neural networks compute in one direction. An input enters, passes through a
 layers, and an output comes out the other end. Each unit is free to produce any value it
 likes from its inputs. Nothing is conserved along the way.
 
-We take a different starting point, borrowed from chemistry. In a reduction–oxidation
+We take a different starting point, borrowed from chemistry. In a reduction-oxidation
 (redox) reaction, some atoms give up electrons (they are oxidised) and others take them up
 (they are reduced). Electrons are not created or destroyed; they move from donor to
 acceptor, and the reaction settles at a stable, low-energy state. We asked a simple
@@ -61,9 +62,9 @@ into, rather than computed in a single forward sweep.
 We call the result a Redox Network. The contribution of this paper is threefold.
 
 First, we define the model: a layered network in which a fixed budget of a conserved
-"charge" flows between units along learned connections and relaxes to an equilibrium, with
-two extra design choices — a soft preference for discrete charge levels, and a hard,
-learned per-feature gate.
+charge flows between units along learned connections and relaxes to an equilibrium, with
+two extra design choices, a soft preference for discrete charge levels and a hard, learned
+per-feature gate.
 
 Second, we show the model has a property that ordinary neural networks famously lack:
 robustness to uninformative features, the headline strength of decision trees. With the
@@ -91,6 +92,9 @@ columns ("age", "income") are meaningful on their own. Trees split on one column
 so they are not rotation invariant and they exploit this structure. Ng [2] proves that any
 rotationally invariant learner needs a number of samples that grows at least linearly with
 the number of irrelevant features, against only logarithmic growth for axis-aware methods.
+
+![Figure 1: Rotation invariance. Left: the classes split along a single feature, so a tree needs one axis-aligned cut. Right: after the feature axes are rotated (the columns are mixed together), the same boundary needs a staircase of many cuts. A neural network is blind to this difference, so it cannot use the meaningful per-column structure that trees rely on.](../experiments/v0/figures/rotation.png)
+
 The second reason is smoothness. Gradient-descent-trained networks are biased toward
 low-frequency (smooth) functions [3]; tabular targets are often jagged and piecewise
 constant, which trees fit easily and smooth models do not.
@@ -129,6 +133,8 @@ conservation law, and it is the core of the design.
 Each unit has a learned "greed" `chi_i` (how strongly it pulls charge toward itself).
 Adjacent layers are joined by learned weights `W` (the connections, or "pipes").
 
+![Figure 2: The Redox Network as connected tanks joined by pipes. A fixed amount of charge is poured in, flows between units along the connections, and settles to a balance. The prediction is read from the settled state. The total charge never changes.](../experiments/v0/figures/architecture.png)
+
 ### 3.2 Energy and the settling dynamics
 
 We define a single energy for a configuration of charges:
@@ -156,6 +162,8 @@ q_i <- q_i - sum_j flow(i,j),   q_j <- q_j + sum_j flow(i,j)
 We repeat for `T` steps. The self-limiting term `(1/2) q_i^2` raises a unit's potential as
 it fills, so flow dies out and the system reaches a balance instead of collapsing into one
 unit. We bound the connection strengths so this iteration is stable (a contraction).
+
+![Figure 3: Charge settling to equilibrium for one input. Each line is one unit's charge over the settling steps. The values start equal, redistribute, and come to rest near the preferred discrete levels (dashed lines).](../experiments/v0/figures/settling.png)
 
 The prediction is read from the settled charges of the output units through a small linear
 layer. We train by unrolling the `T` settling steps and back-propagating an ordinary task
@@ -212,23 +220,24 @@ Table 2: electricity.
 | MLP | 0.783 | 0.732 | 5.1 |
 | ResNet | 0.797 | 0.675 | 12.2 |
 | FT-Transformer | 0.795 | 0.730 | 6.4 |
-| TabNet | 0.771 | 0.745 | 2.6 |
 | **Redox (ours)** | 0.775 | 0.772 | **0.3** |
 
-On both datasets our model loses the least accuracy of any model as noise is added — less
-even than the gradient-boosted trees — so at 100 noise columns it is the most accurate
+On both datasets our model loses the least accuracy of any model as noise is added, less
+even than the gradient-boosted trees, so at 100 noise columns it is the most accurate
 neural network, ahead of the MLP, ResNet, FT-Transformer, and TabNet. This is our main
 positive result: with a hard feature gate, a neural network reaches (and on these two
 datasets slightly exceeds) the tree-style immunity to useless features that ordinary neural
 networks lack.
 
-The cost is small but real. On fully clean data (k=0) the hard gate trims a few weak-but-
-useful features and clean accuracy drops by 1–2 points. A lower gate penalty recovers most
-of this (clean accuracy 0.836 -> 0.858 on MagicTelescope) while keeping the flat behaviour.
+![Figure 4: Test accuracy as junk (noise) features are added, on MagicTelescope. The Redox Network (ours) stays nearly flat, while the standard neural networks fall sharply; the trees are also robust. Lower is worse.](../experiments/v0/figures/robustness_MagicTelescope.png)
+
+The cost is small but real. On fully clean data (k=0) the hard gate trims a few weak but
+useful features, which is why our clean accuracy sits about 1 to 2 points below the other
+models. A lower gate penalty recovers part of this while keeping the flat behaviour.
 
 ### 4.3 Clean accuracy, and an honest negative result
 
-On clean data our model is competitive with the MLP but below the trees (about 1–2 points
+On clean data our model is competitive with the MLP but below the trees (about 1 to 2 points
 on MagicTelescope, about 5 on electricity). To test whether the gap is about the input
 representation, we built a version with a tree-like front end: a small set of learned,
 axis-aligned soft decision trees turns each row into leaf-membership features, which we then
@@ -252,15 +261,17 @@ diffusion is a low-pass filter: it averages neighbouring values and rounds off s
 changes. Tabular targets are jagged, and the established reason neural networks lose on
 tabular data is a bias toward smooth functions [1, 3]. So our central mechanism applies a
 smoother to a problem whose difficulty is precisely its lack of smoothness. When we hand the
-settling step the sharp leaf features, it blurs them, and the prediction worsens — exactly
-what Table 2 shows. This also explains why our only clear win (Section 4.2) comes from the
-hard gate and not from the settling: feature selection and smoothing are different
-operations, and only the former helps here.
+settling step the sharp leaf features, it blurs them, and the prediction worsens, which is
+what the table in Section 4.3 shows. This also explains why our only clear win (Section 4.2)
+comes from the hard gate and not from the settling: feature selection and smoothing are
+different operations, and only the former helps here.
+
+![Figure 5: Settling is smoothing. The sharp step is what tabular targets need, and what trees fit; the rounded curve is what a diffusion / equilibrium step produces, blurring the edge.](../experiments/v0/figures/smoothing.png)
 
 ## 5. Discussion
 
-The Redox Network is a working, novel mechanism with one genuine strength on tabular data —
-tree-like robustness to useless features — and one clear limitation that we now understand.
+The Redox Network is a working, novel mechanism with one genuine strength on tabular data,
+tree-like robustness to useless features, and one clear limitation that we now understand.
 The limitation is structural: equilibrium and diffusion are smoothing operations, and
 tabular accuracy rewards sharpness. No amount of tuning changes this, because it is a
 property of the mathematics, not of the settings.
@@ -268,32 +279,33 @@ property of the mathematics, not of the settings.
 We think this points somewhere useful rather than nowhere. A mechanism that smooths and
 conserves should do well where the target really is smooth, or where a conservation law is
 part of the problem: physical fields, diffusion and heat-like processes, and data on graphs
-(where settling is exactly the kind of message passing graph networks already use). Testing
-the Redox Network in those settings is the natural next step.
+(where settling is exactly the kind of message passing that graph networks already use).
+Testing the Redox Network in those settings is the natural next step.
 
 ## 6. Limitations
 
-Our experiments cover two datasets and a small set of baselines; a fuller study would use
-the complete benchmark of [1] and more neural baselines (FT-Transformer, TabNet, NODE). The
-robustness gate uses a known relaxation [10]; the contribution is its use inside this
-architecture, not the gate itself. The smoothing argument is supported by existing theory
-and by our ablation, but we state it at the level of an explanation rather than a formal
-theorem; a precise statement of settling as a graph low-pass filter is left for future work.
-Finally, settling is sequential and adds compute over a single forward pass.
+Our experiments cover two datasets; a fuller study would use the complete benchmark of [1]
+and add further methods such as NODE and TabPFN. The robustness gate uses a known relaxation
+[10]; the contribution is its use inside this architecture, not the gate itself. The
+smoothing argument is supported by existing theory and by our ablation, but we state it at
+the level of an explanation rather than a formal theorem; a precise statement of settling as
+a graph low-pass filter is left for future work. Finally, settling is sequential and adds
+compute over a single forward pass.
 
 ## 7. Conclusion
 
 We presented the Redox Network, a neural network built on a conservation law and an
 equilibrium, inspired by redox chemistry. It earns a real property that ordinary networks
-lack — robustness to uninformative features — and we showed, with theory and experiment,
-why its core mechanism cannot win on clean tabular accuracy: settling is smoothing, and
-tabular data is not smooth. We believe the honest mapping of where this mechanism helps and
-where it cannot is the most useful thing the paper offers.
+lack, robustness to uninformative features, and we showed, with theory and experiment, why
+its core mechanism cannot win on clean tabular accuracy: settling is smoothing, and tabular
+data is not smooth. We believe the honest mapping of where this mechanism helps and where it
+cannot is the most useful thing the paper offers.
 
 ## Reproducibility
 
 All code, model definitions, experiment scripts, and figures are available at
-[CODE LINK — e.g., GitHub repository]. Each result corresponds to a script and a logged run.
+https://github.com/Al-Mo3tasem/redox-networks. Each result in the paper corresponds to a
+script in that repository.
 
 ## References
 
@@ -316,10 +328,3 @@ regularization. ICLR 2018.
 [11] S. Popov, S. Morozov, A. Babenko. Neural oblivious decision ensembles for deep learning
 on tabular data. ICLR 2020 (arXiv:1909.06312).
 [12] T. Chen, C. Guestrin. XGBoost: a scalable tree boosting system. KDD 2016.
-
-## Figures (to embed in the LaTeX version)
-- Figure 1: architecture (tanks + pipes) — experiments/v0/figures/architecture.png
-- Figure 2: settling to equilibrium — experiments/v0/figures/settling.png (or settling_animation.gif)
-- Figure 3: robustness to junk features — experiments/v0/figures/robustness_MagicTelescope.png
-- Figure 4: rotation invariance — experiments/v0/figures/rotation.png
-- Figure 5: settling is smoothing — experiments/v0/figures/smoothing.png
