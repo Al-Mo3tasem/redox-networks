@@ -1,0 +1,37 @@
+# datasets and caches (downloaded/generated, not source)
+data/
+*.npz
+baseline_cache.json
+
+# scratch outputs, logs, progress files (not meant to be public)
+*_progress.txt
+run_*.log
+_probe*.json
+*.output
+
+# python
+__pycache__/
+*.pyc
+*.pyo
+.ipynb_checkpoints/
+
+# os / editor
+.DS_Store
+Thumbs.db
+.vscode/
+
+# keep the PUBLIC repo clean: code + paper + figures only.
+# exclude internal dev logs, process/decision notes, and scratch test scripts.
+experiments/v0/LOG.md
+docs/
+research/
+experiments/v0/smoke.py
+experiments/v0/smoke_*.py
+experiments/v0/tune_v2.py
+experiments/v0/make_fig_conditional.py
+experiments/v0/*results*.json
+results*.json
+experiments/v0-spec.md
+experiments/v0/progress.txt
+experiments/v0/figures/goldilocks.png
+experiments/v0/figures/reactive_intake.png

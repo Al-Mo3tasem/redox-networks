@@ -1,0 +1,9 @@
+torch>=2.0
+numpy
+scipy
+pandas
+scikit-learn
+xgboost
+lightgbm
+pytorch-tabnet
+matplotlib
