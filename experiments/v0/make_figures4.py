@@ -27,8 +27,7 @@ gy = -gx
 ax[1].step(gx, gy, where="mid", color="green", lw=2.5, label="tree: staircase of MANY cuts")
 ax[1].set_title("Rotated axes (columns scrambled):\ntree now needs many cuts")
 ax[1].set_xlabel("mix of features"); ax[1].legend(fontsize=8)
-fig.suptitle("Rotation invariance: trees love axis-aligned cuts; scrambling the axes hurts them. "
-             "Nets don't care -> nets throw away the axis structure.", fontsize=10)
+fig.tight_layout()
 plt.savefig("figures/rotation.png", dpi=120, bbox_inches="tight")
 plt.close()
 
